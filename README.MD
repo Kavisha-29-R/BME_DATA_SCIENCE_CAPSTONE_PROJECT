@@ -38,6 +38,7 @@ Your project will be evaluated based on the following criteria:
    - Teams may consist of **no more than 5 members**.  
    - Each team member must submit their own README and 5-minute video.  
    - Larger teams will be expected to produce more substantial projects.
+   - Or Individually done.
 
 ---
 

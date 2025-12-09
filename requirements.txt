@@ -12,3 +12,4 @@ ipykernel
 plotly
 imblearn
 jupyter-analysis-tools
+go

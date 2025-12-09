@@ -1,13 +1,11 @@
-# streamlit app overviewing cognitive state classification
-# to run program: streamlit run brain_cognitive_state_app.py
-
+# brain_cognitive_state_app.py
+# Streamlit app: cognitive state classification with interactive plots
 import streamlit as st
 import pandas as pd
 import numpy as np
 import seaborn as sns
-import matplotlib.pyplot as plt
-from matplotlib.colors import ListedColormap
-
+import plotly.express as px
+import plotly.graph_objects as go
 
 # --------------------------
 # Load Data
@@ -15,31 +13,33 @@ from matplotlib.colors import ListedColormap
 @st.cache_data
 def load_data():
     df = pd.read_csv("../Data/processed_features_final/all_participants_features.csv")
+    # Convert Unix UTC timestamps to datetime
+    df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 
-df = load_data()
+full_df = load_data()
 
 # --------------------------
-# Sidebar - Select Participant
+# Sidebar - Participant Selection
 # --------------------------
 st.sidebar.title("Participant Selection")
-participants = df['participant'].unique()
+participants = full_df['participant'].unique()
 selected_participant = st.sidebar.selectbox("Choose Participant", participants)
 
 # Filter data for selected participant
-df_participant = df[df['participant'] == selected_participant]
+df_participant = full_df[full_df['participant'] == selected_participant]
 
 # --------------------------
 # Page Navigation
 # --------------------------
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Participant Overview", "Cognitive State Classification", "Summary & Insights"])
-
-# Define Seaborn palette
-palette = sns.color_palette("husl", 8)
+page = st.sidebar.radio("Go to", ["Participant Overview", 
+                                  "Cognitive State Classification", 
+                                  "Summary & Insights", 
+                                  "Experiment Group Comparison"])
 
 # --------------------------
-# PAGE 1: Participant Overview
+# Participant Overview 
 # --------------------------
 if page == "Participant Overview":
     st.title(f"Participant Overview: {selected_participant}")
@@ -47,37 +47,57 @@ if page == "Participant Overview":
     st.subheader("Summary Statistics")
     st.dataframe(df_participant.describe())
 
-    st.subheader("Raw Time-Series Plots")
-    metrics = [
-        'mean_RT', 'prop_correct',
-        'left_eda_mean', 'right_eda_mean',
-        'left_bvp_hr_mean', 'right_bvp_hr_mean',
-        'left_ibi_ibi_rmssd', 'right_ibi_ibi_rmssd',
-        'left_acc_mag_mean', 'right_acc_mag_mean'
+    st.subheader("Raw Time-Series Plots (Left vs Right)")
+
+    metrics_pairs = [
+        ('mean_RT', None),
+        ('prop_correct', None),
+        ('eda_mean', ('left_eda_mean','right_eda_mean')),
+        ('bvp_hr_mean', ('left_bvp_hr_mean','right_bvp_hr_mean')),
+        ('acc_mag_mean', ('left_acc_mag_mean','right_acc_mag_mean')),
+        ('temp_mean', ('left_temp_mean','right_temp_mean')),
+        ('ibi_ibi_rmssd', ('left_ibi_ibi_rmssd','right_ibi_ibi_rmssd')),
+        ('ibi_ibi_sdnn', ('left_ibi_ibi_sdnn','right_ibi_ibi_sdnn'))
     ]
 
-    for idx, metric in enumerate(metrics):
-        if metric in df_participant.columns:
-            fig, ax = plt.subplots(figsize=(10,4))
-            sns.lineplot(
-                x='window_center', y=metric,
-                data=df_participant, color=palette[idx % len(palette)]
+    for metric, pair in metrics_pairs:
+        if pair:
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=df_participant['window_center'],
+                y=df_participant[pair[0]],
+                mode='lines+markers',
+                name=pair[0]
+            ))
+            fig.add_trace(go.Scatter(
+                x=df_participant['window_center'],
+                y=df_participant[pair[1]],
+                mode='lines+markers',
+                name=pair[1]
+            ))
+            fig.update_layout(
+                title=f"{metric.replace('_',' ').title()} (Left vs Right)",
+                xaxis_title="Time (UTC)",
+                yaxis_title=metric.replace('_',' ').title(),
+                hovermode='x unified'
             )
-            ax.set_title(metric.replace('_', ' ').title())
-            ax.set_xlabel("Time (window center)")
-            ax.set_ylabel(metric.replace('_', ' ').title())
-            st.pyplot(fig)
+        else:
+            fig = px.line(
+                df_participant, x='window_center', y=metric,
+                title=metric.replace('_',' ').title(),
+                labels={"window_center":"Time (UTC)", metric: metric.replace('_',' ').title()}
+            )
+            fig.update_traces(mode='lines+markers')
+        st.plotly_chart(fig, use_container_width=True)
 
 # --------------------------
-# PAGE 2: Cognitive State Classification
+# Cognitive State Classification
 # --------------------------
 elif page == "Cognitive State Classification":
     st.title(f"Cognitive State Classification: {selected_participant}")
 
-    # --------------------------
-    # High vs Low Performance
-    # --------------------------
-    st.subheader("High vs Low Performance")
+    # --- Performance ---
+    st.subheader("High vs Low Performance by Session Type")
     median_RT = df_participant['mean_RT'].median()
     median_accuracy = df_participant['prop_correct'].median()
 
@@ -89,26 +109,24 @@ elif page == "Cognitive State Classification":
 
     df_participant['performance_state'] = df_participant.apply(classify_performance, axis=1)
 
-    fig, ax = plt.subplots(figsize=(10,4))
-    sns.scatterplot(
-        x='window_center', y='mean_RT', hue='performance_state',
-        palette=["#2ca02c", "#d62728"],  # green=High, red=Low
-        data=df_participant, s=50
+    fig = px.scatter(
+        df_participant,
+        x='window_center',
+        y='mean_RT',
+        color='performance_state',
+        symbol='session_type',
+        hover_data=['session_type', 'prop_correct', 'mean_RT'],
+        color_discrete_map={"High":"green","Low":"red"},
+        title="Performance Timeline (by Session Type)",
+        labels={"window_center":"Time (UTC)", "mean_RT":"Mean RT"}
     )
-    ax.set_title("Performance Timeline")
-    ax.set_xlabel("Time (window center)")
-    ax.set_ylabel("Mean RT")
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Show % time in each state
-    perf_counts = df_participant['performance_state'].value_counts(normalize=True) * 100
     st.write("Percentage of time in each performance state:")
-    st.dataframe(perf_counts)
+    st.dataframe(df_participant['performance_state'].value_counts(normalize=True)*100)
 
-    # --------------------------
-    # Stressed vs Calm
-    # --------------------------
-    st.subheader("Stressed vs Calm")
+    # --- Stress ---
+    st.subheader("Stressed vs Calm by Session Type")
     median_eda = (df_participant['left_eda_mean'].median() + df_participant['right_eda_mean'].median()) / 2
     median_hr = (df_participant['left_bvp_hr_mean'].median() + df_participant['right_bvp_hr_mean'].median()) / 2
     median_rmssd = (df_participant['left_ibi_ibi_rmssd'].median() + df_participant['right_ibi_ibi_rmssd'].median()) / 2
@@ -117,7 +135,6 @@ elif page == "Cognitive State Classification":
         eda = (row['left_eda_mean'] + row['right_eda_mean']) / 2
         hr = (row['left_bvp_hr_mean'] + row['right_bvp_hr_mean']) / 2
         rmssd = (row['left_ibi_ibi_rmssd'] + row['right_ibi_ibi_rmssd']) / 2
-
         if eda > median_eda or hr > median_hr or rmssd < median_rmssd:
             return 'Stressed'
         else:
@@ -125,24 +142,24 @@ elif page == "Cognitive State Classification":
 
     df_participant['stress_state'] = df_participant.apply(classify_stress, axis=1)
 
-    fig, ax = plt.subplots(figsize=(10,4))
-    sns.scatterplot(
-        x='window_center', y='left_eda_mean', hue='stress_state',
-        palette=["#1f77b4", "#ff7f0e"],  # blue=Calm, orange=Stressed
-        data=df_participant, s=50
+    fig = px.scatter(
+        df_participant,
+        x='window_center',
+        y='left_eda_mean',
+        color='stress_state',
+        symbol='session_type',
+        hover_data=['session_type', 'left_eda_mean', 'right_eda_mean', 'left_bvp_hr_mean', 'right_bvp_hr_mean'],
+        color_discrete_map={"Calm":"blue","Stressed":"orange"},
+        title="Stress Timeline (EDA Left) by Session Type",
+        labels={"window_center":"Time (UTC)", "left_eda_mean":"EDA Left Mean"}
     )
-    ax.set_title("Stress Timeline (EDA)")
-    ax.set_xlabel("Time (window center)")
-    ax.set_ylabel("EDA Mean")
-    st.pyplot(fig)
+    st.plotly_chart(fig, use_container_width=True)
 
-    # Show % time stressed
-    stress_counts = df_participant['stress_state'].value_counts(normalize=True) * 100
     st.write("Percentage of time in each stress state:")
-    st.dataframe(stress_counts)
+    st.dataframe(df_participant['stress_state'].value_counts(normalize=True)*100)
 
 # --------------------------
-# PAGE 3: Summary & Insights
+# Summary & Insights
 # --------------------------
 elif page == "Summary & Insights":
     st.title(f"Summary & Insights: {selected_participant}")
@@ -155,22 +172,8 @@ elif page == "Summary & Insights":
         'left_ibi_ibi_rmssd', 'right_ibi_ibi_rmssd'
     ]
     corr = df_participant[metrics].corr()
-    fig, ax = plt.subplots(figsize=(8,6))
-    palette = sns.color_palette("husl", 8)
-    cmap = ListedColormap(palette)
-    sns.heatmap(corr, annot=True, fmt=".2f", cmap=cmap, cbar=True, ax=ax)
-    st.pyplot(fig)
-
-    st.subheader("Scatter Plots")
-    fig, ax = plt.subplots(figsize=(10,4))
-    sns.scatterplot(
-        x='left_ibi_ibi_rmssd', y='prop_correct', hue='left_eda_mean',
-        palette=palette, data=df_participant, s=50
-    )
-    ax.set_title("HRV vs Accuracy (colored by EDA)")
-    ax.set_xlabel("Left RMSSD")
-    ax.set_ylabel("Prop Correct")
-    st.pyplot(fig)
+    fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r')
+    st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Download Summary CSV")
     csv = df_participant.to_csv(index=False)
@@ -180,3 +183,28 @@ elif page == "Summary & Insights":
         file_name=f"{selected_participant}_summary.csv",
         mime="text/csv"
     )
+
+# --------------------------
+# Experiment Group Comparison
+# --------------------------
+elif page == "Experiment Group Comparison":
+    st.title("Experiment Group Comparison")
+
+    # Identify participants per experiment
+    exp1_participants = [p for p in full_df['participant'].unique() if str(p).startswith("A")]
+    exp2_participants = [p for p in full_df['participant'].unique() if str(p).startswith("B")]
+
+    exp1_df = full_df[full_df['participant'].isin(exp1_participants)]
+    exp2_df = full_df[full_df['participant'].isin(exp2_participants)]
+
+    # Compute mean accuracy per session type
+    exp1_grouped = exp1_df.groupby(["participant","session_type"])["prop_correct"].mean().unstack()
+    exp2_grouped = exp2_df.groupby(["participant","session_type"])["prop_correct"].mean().unstack()
+
+    st.subheader("Experiment 1 (A-group)")
+    fig = px.bar(exp1_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.subheader("Experiment 2 (B-group)")
+    fig = px.bar(exp2_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
+    st.plotly_chart(fig, use_container_width=True)

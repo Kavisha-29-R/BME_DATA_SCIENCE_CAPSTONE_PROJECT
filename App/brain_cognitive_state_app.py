@@ -26,10 +26,6 @@ full_df = load_data_full()
 df_cluster = load_data_clusters()
 
 # --------------------------
-# Sidebar - Participant Selection
-# --------------------------
-
-# --------------------------
 # Sidebar - Experiment and Participant Selection
 # --------------------------
 
@@ -62,10 +58,82 @@ df_participant = full_df[full_df['participant'] == selected_participant].copy()
 # Page Navigation
 # --------------------------
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Participant Overview", 
-                                  "Cognitive State Classification", 
-                                  "Summary & Insights", 
-                                  "Experiment Group Comparison"])
+page = st.sidebar.radio(
+    "Go to",
+    [
+        "Home",
+        "Participant Overview",
+        "Cognitive State Classification",
+        "Summary & Insights",
+        "Experiment Group Comparison"
+    ]
+)
+
+# --------------------------
+# Home Page
+# --------------------------
+if page == "Home":
+    st.title("Physiological Monitoring of Cognitive States")
+    st.markdown("### Wearable-based Cognitive State Dashboard")
+
+    st.markdown(
+        """
+        **Purpose of this app**
+
+        This Streamlit dashboard provides an interactive visualization and analysis
+        of **physiological signals collected from wearable devices** during two cognitive
+        experiments. The app focuses exclusively on **peripheral physiological features**
+        (e.g. electrodermal activity, heart rate, movement, and skin temperature)
+        and **does not use EEG signals**.
+
+        The goals of this dashboard are to:
+        - Explore physiological dynamics over time for individual participants
+        - Compare responses across experimental session types
+        - Identify **unsupervised physiological states** using clustering
+        - Support interpretation of wearable signals in cognitive monitoring research
+        """
+    )
+
+    st.markdown(
+        """
+        **Data source**
+
+        The data used in this project comes from the following PhysioNet dataset:
+
+        🔗 [Brain Wearable Monitoring Dataset (PhysioNet)](https://physionet.org/content/brain-wearable-monitoring/1.0.0/)
+        """
+    )
+
+    st.markdown(
+        """
+        **Clustering approach**
+
+        Cognitive states are explored using **K-Means clustering applied only to
+        physiological features**, including:
+        - Electrodermal activity (EDA)
+        - Heart rate and heart rate variability
+        - Accelerometer-derived movement
+        - Skin temperature
+
+        The clustering is **unsupervised** and intended to reveal **physiologically
+        interpretable states** (e.g. baseline, arousal, movement-related activity),
+        rather than definitive cognitive labels.
+        """
+    )
+
+    st.markdown("---")
+
+    # PDF download
+    st.subheader("Related Research Paper")
+
+    with open("../Research/Regulation of Brain Cognitive States.pdf", "rb") as pdf_file:
+        st.download_button(
+            label="Download Research Paper (PDF)",
+            data=pdf_file,
+            file_name="Regulation_of_Brain_Cognitive_States.pdf",
+            mime="application/pdf"
+        )
+
 
 # --------------------------
 # Participant Overview 

@@ -83,7 +83,7 @@ if page == "Home":
         This Streamlit dashboard provides an interactive visualization and analysis
         of **physiological signals collected from wearable devices** during two cognitive
         experiments. The app focuses exclusively on **peripheral physiological features**
-        (e.g. electrodermal activity, heart rate, movement, and skin temperature)
+        (e.g. electrodermal activity, heart rate, heart rate variability, movement, and skin temperature)
         and **does not use EEG signals**.
 
         The goals of this dashboard are to:
@@ -111,12 +111,12 @@ if page == "Home":
         Cognitive states are explored using **K-Means clustering applied only to
         physiological features**, including:
         - Electrodermal activity (EDA)
-        - Heart rate and heart rate variability
+        - Heart rate (HR) and heart rate variability (HRV), e.g., RMSSD and SDNN
         - Accelerometer-derived movement
         - Skin temperature
 
         The clustering is **unsupervised** and intended to reveal **physiologically
-        interpretable states** (e.g. baseline, arousal, movement-related activity),
+        interpretable states** (e.g., baseline, arousal, movement-related activity),
         rather than definitive cognitive labels.
         """
     )
@@ -133,7 +133,6 @@ if page == "Home":
             file_name="Regulation_of_Brain_Cognitive_States.pdf",
             mime="application/pdf"
         )
-
 
 # --------------------------
 # Participant Overview 

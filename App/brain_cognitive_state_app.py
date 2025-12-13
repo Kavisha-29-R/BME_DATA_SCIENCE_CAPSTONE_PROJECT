@@ -11,13 +11,19 @@ import plotly.graph_objects as go
 # Load Data
 # --------------------------
 @st.cache_data
-def load_data():
+def load_data_full():
     df = pd.read_csv("../Data/processed_features_final/all_participants_features.csv")
-    # Convert Unix UTC timestamps to datetime
     df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 
-full_df = load_data()
+@st.cache_data
+def load_data_clusters():
+    df = pd.read_csv("../Data/processed_features_final/all_participants_clusters.csv")
+    df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
+    return df
+
+full_df = load_data_full()
+df_cluster = load_data_clusters()
 
 # --------------------------
 # Sidebar - Participant Selection

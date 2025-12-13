@@ -28,12 +28,35 @@ df_cluster = load_data_clusters()
 # --------------------------
 # Sidebar - Participant Selection
 # --------------------------
+
+# --------------------------
+# Sidebar - Experiment and Participant Selection
+# --------------------------
+
+# Identify participants per experiment
+exp1_subjects = [p for p in full_df['participant'].unique() if str(p).startswith("A")]
+exp2_subjects = [p for p in full_df['participant'].unique() if str(p).startswith("B")]
+
 st.sidebar.title("Participant Selection")
-participants = full_df['participant'].unique()
+
+# Select experiment
+experiment = st.sidebar.radio("Choose Experiment", ["Experiment 1 (A-group)", "Experiment 2 (B-group)"])
+
+# Update participant list based on experiment
+if experiment.startswith("Experiment 1"):
+    participants = exp1_subjects
+else:
+    participants = exp2_subjects
+
+# Select participant
 selected_participant = st.sidebar.selectbox("Choose Participant", participants)
 
-# Filter data for selected participant
-df_participant = full_df[full_df['participant'] == selected_participant]
+# Filter data for selected participant (make a copy to avoid warnings)
+df_participant = full_df[full_df['participant'] == selected_participant].copy()
+
+
+# Filter data for selected participant and make a copy to avoid SettingWithCopyWarning
+df_participant = full_df[full_df['participant'] == selected_participant].copy()
 
 # --------------------------
 # Page Navigation
@@ -94,7 +117,8 @@ if page == "Participant Overview":
                 labels={"window_center":"Time (UTC)", metric: metric.replace('_',' ').title()}
             )
             fig.update_traces(mode='lines+markers')
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width='stretch')
+
 
 # --------------------------
 # Cognitive State Classification
@@ -126,7 +150,7 @@ elif page == "Cognitive State Classification":
         title="Performance Timeline (by Session Type)",
         labels={"window_center":"Time (UTC)", "mean_RT":"Mean RT"}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.write("Percentage of time in each performance state:")
     st.dataframe(df_participant['performance_state'].value_counts(normalize=True)*100)
@@ -159,7 +183,8 @@ elif page == "Cognitive State Classification":
         title="Stress Timeline (EDA Left) by Session Type",
         labels={"window_center":"Time (UTC)", "left_eda_mean":"EDA Left Mean"}
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
+
 
     st.write("Percentage of time in each stress state:")
     st.dataframe(df_participant['stress_state'].value_counts(normalize=True)*100)
@@ -179,7 +204,8 @@ elif page == "Summary & Insights":
     ]
     corr = df_participant[metrics].corr()
     fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r')
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
+
 
     st.subheader("Download Summary CSV")
     csv = df_participant.to_csv(index=False)
@@ -209,8 +235,9 @@ elif page == "Experiment Group Comparison":
 
     st.subheader("Experiment 1 (A-group)")
     fig = px.bar(exp1_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
+
 
     st.subheader("Experiment 2 (B-group)")
     fig = px.bar(exp2_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')

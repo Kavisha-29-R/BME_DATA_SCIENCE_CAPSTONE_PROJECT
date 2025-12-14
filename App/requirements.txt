@@ -8,8 +8,7 @@ seaborn
 mne
 joblib
 wfdb
-ipykernel 
+ipykernel
 plotly
 imblearn
 jupyter-analysis-tools
-go

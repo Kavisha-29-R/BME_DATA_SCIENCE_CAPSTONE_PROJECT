@@ -2,7 +2,7 @@
 
 **Author:** Kavisha Reddy
 
-**Project Link:** [Cognitive Physio Explorer](https://cognitive-physio-explorer.streamlit.app/)
+**Project Link:** [Cognitive Physio Explorer App](https://cognitive-physio-explorer.streamlit.app/)
 
 ---
 
@@ -80,6 +80,12 @@ The app provides a comprehensive visualization and analysis platform for:
      ```bash
      venv\Scripts\activate
      ```
+     or 
+
+    * Create a new conda environment:
+        ```bash
+        conda create -n cognitive_env python=3.12
+        ```
    * macOS/Linux:
 
      ```bash

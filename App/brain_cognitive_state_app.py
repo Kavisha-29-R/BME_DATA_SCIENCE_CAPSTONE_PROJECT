@@ -33,6 +33,32 @@ data_copy = full_df.merge(
     how='left'
 )
 
+cluster_features = [
+    # EDA (sympathetic arousal)
+    'left_eda_mean',
+    'right_eda_mean',
+    'left_eda_n_peaks',
+    'right_eda_n_peaks',
+
+    # Heart rate
+    'left_bvp_hr_mean',
+    'right_bvp_hr_mean',
+
+    # Movement context
+    'left_acc_mag_mean',
+    'right_acc_mag_mean',
+
+    # Skin temperature
+    'left_temp_mean',
+    'right_temp_mean'
+]
+
+# Create cluster description mapping
+cluster_descriptions = {
+    0: "High tonic arousal (EDA mean), low movement; likely focused/alert states.",
+    1: "Low arousal, minimal movement; relaxed or disengaged states.",
+    2: "Low arousal, low movement, high temp; relaxed and comfortable states."
+}
 
 # --------------------------
 # Sidebar - Experiment and Participant Selection
@@ -73,8 +99,7 @@ page = st.sidebar.radio(
         "Home",
         "Participant Overview",
         "Cognitive & Physiological Classification",
-        "Summary & Insights",
-        "Experiment Group Comparison"
+        "Physiological Cluster Explorer"
     ]
 )
 
@@ -331,6 +356,27 @@ if page == "Participant Overview":
         - **Meaning:** Short-term HRV dominated by parasympathetic activity  
         - **Cognitive Interpretation:** Higher = relaxation and adaptive regulation; lower = cognitive load or sympathetic dominance
         """)
+        
+    st.subheader("Correlation Heatmap")
+    metrics = [
+        'mean_RT', 'prop_correct',
+        'left_eda_mean', 'right_eda_mean',
+        'left_bvp_hr_mean', 'right_bvp_hr_mean',
+        'left_ibi_ibi_rmssd', 'right_ibi_ibi_rmssd'
+    ]
+    corr = df_participant[metrics].corr()
+    fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r')
+    st.plotly_chart(fig, width='stretch')
+
+
+    st.subheader("Download Summary CSV")
+    csv = df_participant.to_csv(index=False)
+    st.download_button(
+        label="Download Participant Data",
+        data=csv,
+        file_name=f"{selected_participant}_summary.csv",
+        mime="text/csv"
+    )
 
 
 # --------------------------
@@ -410,37 +456,21 @@ elif page == "Cognitive & Physiological Classification":
     st.dataframe((df_participant_copy['stress_state'].value_counts(normalize=True)*100).round(2))
 
     # --- Physiological Cluster Distribution ---
-    cluster_features = [
-        # EDA (sympathetic arousal)
-        'left_eda_mean',
-        'right_eda_mean',
-        'left_eda_n_peaks',
-        'right_eda_n_peaks',
-
-        # Heart rate
-        'left_bvp_hr_mean',
-        'right_bvp_hr_mean',
-
-        # Movement context
-        'left_acc_mag_mean',
-        'right_acc_mag_mean',
-
-        # Skin temperature
-        'left_temp_mean',
-        'right_temp_mean'
-    ]
-
-    threshold_summary = {}
-
-    for feature in cluster_features:
-        threshold_summary[feature] = {
-            '50th_percentile': df_cluster[feature].quantile(0.50),
-            '75th_percentile': df_cluster[feature].quantile(0.75),
-            '84th_percentile (~+1z)': df_cluster[feature].quantile(0.84),
-            '90th_percentile': df_cluster[feature].quantile(0.90)
-        }
     
-    st.subheader("Physiological Cluster Summary")
+    st.subheader("Physiological Cluster Profiles with Interpretation")
+
+    cluster_profiles = (
+        df_cluster
+        .groupby('physio_cluster')[cluster_features]
+        .mean()
+        .round(4)
+    )
+    
+    # Add description column
+    cluster_profiles['Description'] = cluster_profiles.index.map(cluster_descriptions)
+    
+    # Display in the app
+    st.dataframe(cluster_profiles)
 
     cluster_session_dist = (
         df_participant_copy.groupby(['physio_cluster','session_type'])
@@ -448,7 +478,6 @@ elif page == "Cognitive & Physiological Classification":
         .reset_index(name='count')
     )
 
-    # Use transform to avoid misaligned index
     cluster_session_dist['percentage'] = cluster_session_dist.groupby('session_type')['count'].transform(lambda x: 100 * x / x.sum())
 
     clusters = cluster_session_dist['physio_cluster'].unique()
@@ -511,6 +540,44 @@ elif page == "Cognitive & Physiological Classification":
     )
     st.plotly_chart(fig_box_acc, width='stretch')
     
+    # Define the threshold table
+    physio_thresholds = pd.DataFrame([
+        {
+            "Label": "Movement / Artifact",
+            "Condition": "ACC > 0.83",
+            "Meaning": "High movement; data may be contaminated by motion artifacts."
+        },
+        {
+            "Label": "High Arousal",
+            "Condition": "EDA mean > 0.51 OR EDA peaks > 0.67 AND HR > 0.63",
+            "Meaning": "Sympathetic activation; participant likely stressed, alert, or engaged."
+        },
+        {
+            "Label": "Low Arousal",
+            "Condition": "ACC <= 0.83 AND EDA mean <= 0.51 AND EDA peaks <= 0.67 AND HR <= 0.63",
+            "Meaning": "Calm or resting state; baseline physiological activity."
+        }
+    ])
+
+    # Display in Streamlit
+    st.subheader("Physiological States Thresholds & Interpretations")
+    st.dataframe(physio_thresholds)
+    
+    threshold_summary = {}
+
+    for feature in cluster_features:
+        threshold_summary[feature] = {
+            '50th_percentile': df_cluster[feature].quantile(0.50),
+            '75th_percentile': df_cluster[feature].quantile(0.75),
+            '84th_percentile (~+1z)': df_cluster[feature].quantile(0.84),
+            '90th_percentile': df_cluster[feature].quantile(0.90)
+        }
+
+    summary_threshold_df = pd.DataFrame(threshold_summary)
+    
+    # Display in the app
+    st.dataframe(summary_threshold_df)
+    # --- Mean RT and Proportion Correct by Session / Physiological State ---
     st.subheader("Mean RT and Accuracy by Session / Physiological State")
 
     fig_box = go.Figure()
@@ -547,56 +614,125 @@ elif page == "Cognitive & Physiological Classification":
         boxmode='group'
     )
     st.plotly_chart(fig_box_acc, width='stretch')
-
+    
 # --------------------------
-# Summary & Insights
+# Physiological Cluster Explorer
 # --------------------------
-elif page == "Summary & Insights":
-    st.title(f"Summary & Insights: {selected_participant}")
+elif page == "Physiological Cluster Explorer":
+    st.title("Physiological Cluster Explorer")
+    
+    st.markdown("""
+        Adjust the sliders for physiological features to see which cluster this profile would belong to,
+        along with its interpretation.
+    """)
+    
+    st.markdown("""
+    ### Physiological Feature Sliders
+    Adjust the sliders to simulate a participant’s physiological state. Each feature represents a peripheral signal measured from wearable sensors:
 
-    st.subheader("Correlation Heatmap")
-    metrics = [
-        'mean_RT', 'prop_correct',
-        'left_eda_mean', 'right_eda_mean',
-        'left_bvp_hr_mean', 'right_bvp_hr_mean',
-        'left_ibi_ibi_rmssd', 'right_ibi_ibi_rmssd'
-    ]
-    corr = df_participant[metrics].corr()
-    fig = px.imshow(corr, text_auto=".2f", color_continuous_scale='RdBu_r')
-    st.plotly_chart(fig, width='stretch')
+    - **EDA Mean (Left/Right):** Sympathetic arousal; higher = stressed/alert, lower = calm.
+    - **EDA Peaks (Left/Right):** Number of rapid EDA changes; more peaks = more physiological responses.
+    - **Heart Rate (Left/Right):** Beats per minute; higher = stress or activity, lower = relaxed.
+    - **Acceleration Magnitude (Left/Right):** Physical movement; higher = moving, lower = still.
+    - **Skin Temperature (Left/Right):** Peripheral temperature; reflects stress vs relaxation.
+    """)
 
+    # Filter by experiment/session 
+    # Select experiment
+    experiment = st.radio("Select Experiment", ["Experiment 1 (A-group)", "Experiment 2 (B-group)"])
 
-    st.subheader("Download Summary CSV")
-    csv = df_participant.to_csv(index=False)
-    st.download_button(
-        label="Download Participant Data",
-        data=csv,
-        file_name=f"{selected_participant}_summary.csv",
-        mime="text/csv"
-    )
+    # Filter participants by experiment
+    if experiment.startswith("Experiment 1"):
+        participants_exp = [p for p in full_df['participant'].unique() if str(p).startswith("A")]
+    else:
+        participants_exp = [p for p in full_df['participant'].unique() if str(p).startswith("B")]
 
-# --------------------------
-# Experiment Group Comparison
-# --------------------------
-elif page == "Experiment Group Comparison":
-    st.title("Experiment Group Comparison")
+    # Filter sessions based on experiment participants
+    sessions_exp = full_df[full_df['participant'].isin(participants_exp)]['session_type'].dropna().unique()
+    session_types = ['All'] + sorted(sessions_exp)
 
-    # Identify participants per experiment
-    exp1_participants = [p for p in full_df['participant'].unique() if str(p).startswith("A")]
-    exp2_participants = [p for p in full_df['participant'].unique() if str(p).startswith("B")]
+    # Select session
+    session = st.selectbox("Select Session Type", session_types)
 
-    exp1_df = full_df[full_df['participant'].isin(exp1_participants)]
-    exp2_df = full_df[full_df['participant'].isin(exp2_participants)]
+    # Filter df_cluster to selected experiment/session if needed
+    filtered_df = df_cluster.copy()
+    if experiment.startswith("Experiment 1"):
+        participants = [p for p in full_df['participant'].unique() if str(p).startswith("A")]
+    else:
+        participants = [p for p in full_df['participant'].unique() if str(p).startswith("B")]
+    filtered_df = filtered_df[filtered_df['participant'].isin(participants)]
+    if session != 'All':
+        filtered_df = filtered_df[filtered_df['session_type'] == session]
 
-    # Compute mean accuracy per session type
-    exp1_grouped = exp1_df.groupby(["participant","session_type"])["prop_correct"].mean().unstack()
-    exp2_grouped = exp2_df.groupby(["participant","session_type"])["prop_correct"].mean().unstack()
+    # Get ranges for sliders
+    slider_values = {}
+    for feature in cluster_features:
+        min_val = float(filtered_df[feature].min())
+        max_val = float(filtered_df[feature].max())
+        default_val = float(filtered_df[feature].median())
+        slider_values[feature] = st.slider(
+            label=feature,
+            min_value=min_val,
+            max_value=max_val,
+            value=default_val
+        )
+        
+    # Convert input into array
+    user_input = np.array([slider_values[f] for f in cluster_features]).reshape(1, -1)
+    
+    # Choose number of clusters
+    from sklearn.cluster import KMeans
+    from sklearn.preprocessing import StandardScaler
+    
+    def prepare_physio_data_for_clustering(df, features):
+        df_clean = df.copy()
 
-    st.subheader("Experiment 1 (A-group)")
-    fig = px.bar(exp1_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
-    st.plotly_chart(fig, width='stretch')
+        df_clean = df_clean[['participant', 'session_type', 'window_center'] + features]
 
+        # Cast to float
+        df_clean[features] = df_clean[features].astype(float)
 
-    st.subheader("Experiment 2 (B-group)")
-    fig = px.bar(exp2_grouped, barmode="group", title="Behavioral Accuracy by Session Type")
-    st.plotly_chart(fig, width='stretch')
+        # ---- Impute missing values per participant (median) ----
+        for p in df_clean['participant'].unique():
+            mask = df_clean['participant'] == p
+            df_p = df_clean.loc[mask, features]
+
+            medians = df_p.median()
+            df_clean.loc[mask, features] = df_p.fillna(medians)
+
+        # ---- Z-score normalization per participant ----
+        df_norm = []
+        for p in df_clean['participant'].unique():
+            df_p = df_clean[df_clean['participant'] == p].copy()
+            scaler = StandardScaler()
+            df_p[features] = scaler.fit_transform(df_p[features])
+            df_norm.append(df_p)
+
+        df_norm = pd.concat(df_norm, ignore_index=True)
+        return df_norm
+    
+    
+    
+    df_model = prepare_physio_data_for_clustering(full_df, cluster_features)
+    
+    # Choose number of clusters
+    k = 3  # physiologically interpretable (low / high arousal / movement)
+
+    kmeans = KMeans(n_clusters=k, random_state=42, n_init=20)
+    df_model['physio_cluster'] = kmeans.fit_predict(df_model[cluster_features])
+
+    # Predict nearest cluster (using fitted KMeans)
+    user_input_df = pd.DataFrame([slider_values], columns=cluster_features)
+    cluster_label = kmeans.predict(user_input_df)[0]
+
+    #cluster_label = kmeans.predict(user_input)[0]
+    
+    st.subheader(f"Predicted Cluster: {cluster_label}")
+    st.write(f"Description: {cluster_descriptions[cluster_label]}")
+    
+    #distances = np.linalg.norm(kmeans.cluster_centers_ - user_input, axis=1)
+    distances = np.linalg.norm(kmeans.cluster_centers_ - user_input_df.values, axis=1)
+
+    st.subheader("Distance to Cluster Centroids")
+    for i, dist in enumerate(distances):
+        st.write(f"Cluster {i}: {dist:.4f}")

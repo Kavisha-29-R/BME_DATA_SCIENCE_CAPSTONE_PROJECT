@@ -6,7 +6,7 @@
 
 **Project Repository:** [Capstone Project Repository](https://github.com/Kavisha-29-R/BME_DATA_SCIENCE_CAPSTONE_PROJECT)
 
-All data preparation and manipulations can be found in the repository inthe Notebooks folder.
+All data preparation and manipulations can be found in the repository in the Notebooks folder.
 
 
 ---

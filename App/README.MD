@@ -4,6 +4,8 @@
 
 **Project Link:** [Cognitive Physio Explorer App](https://cognitive-physio-explorer.streamlit.app/)
 
+**Project Repositroy:** [Capstone Project Repository](https://github.com/Kavisha-29-R/BME_DATA_SCIENCE_CAPSTONE_PROJECT)
+
 ---
 
 ## Project Description

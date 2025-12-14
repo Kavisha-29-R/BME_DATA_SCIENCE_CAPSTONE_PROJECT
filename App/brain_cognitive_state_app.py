@@ -12,13 +12,13 @@ import plotly.graph_objects as go
 # --------------------------
 @st.cache_data
 def load_data_full():
-    df = pd.read_csv("../Data/processed_features_final/all_participants_features.csv")
+    df = pd.read_csv("data/all_participants_features.csv")
     df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 
 @st.cache_data
 def load_data_clusters():
-    df = pd.read_csv("../Data/processed_features_final/all_participants_clusters.csv")
+    df = pd.read_csv("data/all_participants_clusters.csv")
     df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 

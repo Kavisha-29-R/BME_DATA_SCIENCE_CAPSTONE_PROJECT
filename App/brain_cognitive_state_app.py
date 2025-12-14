@@ -6,19 +6,27 @@ import numpy as np
 import seaborn as sns
 import plotly.express as px
 import plotly.graph_objects as go
+import os
+
+base_dir = os.path.dirname(__file__)  
+features_file = os.path.join(base_dir, "data", "all_participants_features.csv")
+clusters_file = os.path.join(base_dir, "data", "all_participants_clusters.csv")
+
 
 # --------------------------
 # Load Data
 # --------------------------
 @st.cache_data
 def load_data_full():
-    df = pd.read_csv("data/all_participants_features.csv")
+    #df = pd.read_csv("data/all_participants_features.csv")
+    df = pd.read_csv(features_file)
     df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 
 @st.cache_data
 def load_data_clusters():
-    df = pd.read_csv("data/all_participants_clusters.csv")
+    #df = pd.read_csv("data/all_participants_clusters.csv")
+    df = pd.read_csv(clusters_file)
     df['window_center'] = pd.to_datetime(df['window_center'], unit='s', utc=True)
     return df
 

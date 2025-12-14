@@ -193,9 +193,9 @@ if page == "Participant Overview":
 
     st.subheader("Behavioural and Physiological Time-Series")
 
-    # ------------------------------------------------------------------
+    # ------------------------
     # Feature metadata 
-    # ------------------------------------------------------------------
+    # ------------------------
     feature_info = {
         'mean_RT': {
             'title': "Mean Reaction Time (Cognitive Processing Speed)",
@@ -263,9 +263,9 @@ if page == "Participant Overview":
         }
     }
 
-    # ------------------------------------------------------------------
+    # --------------------------------
     # Metric plotting configuration
-    # ------------------------------------------------------------------
+    # --------------------------------
     metrics_pairs = [
         ('mean_RT', None),
         ('prop_correct', None),
@@ -279,9 +279,9 @@ if page == "Participant Overview":
     
     session_types = ['All'] + sorted(df_participant['session_type'].dropna().unique().tolist())
 
-    # ------------------------------------------------------------------
+    # ----------------------------
     # Plot loop
-    # ------------------------------------------------------------------
+    # ----------------------------
     for metric, pair in metrics_pairs:
 
         # Section header + description
@@ -339,9 +339,9 @@ if page == "Participant Overview":
 
         st.plotly_chart(fig, width='stretch')
         
-    # ------------------------------------------------------------------
-    # HRV Feature Definitions Table (Compact)
-    # ------------------------------------------------------------------
+    # -------------------------------
+    # HRV Feature Definitions Table
+    # -------------------------------
     with st.expander("Heart Rate Variability (HRV) Feature Definitions", expanded=False):
 
         st.markdown("**IBI Count** (`ibi_count`)") 

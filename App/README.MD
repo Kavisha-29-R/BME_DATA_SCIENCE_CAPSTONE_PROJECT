@@ -4,7 +4,10 @@
 
 **Project Link:** [Cognitive Physio Explorer App](https://cognitive-physio-explorer.streamlit.app/)
 
-**Project Repositroy:** [Capstone Project Repository](https://github.com/Kavisha-29-R/BME_DATA_SCIENCE_CAPSTONE_PROJECT)
+**Project Repository:** [Capstone Project Repository](https://github.com/Kavisha-29-R/BME_DATA_SCIENCE_CAPSTONE_PROJECT)
+
+All data preparation and manipulations can be found in the repository inthe Notebooks folder.
+
 
 ---
 

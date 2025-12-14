@@ -115,8 +115,7 @@ conda create -n cognitive_env python=3.12
 
 ## Video Demonstration
 
-A **5-minute video demonstration** of the app can be found here:
-[Video Demo Link or Embed]
+A **5-minute video demonstration** of the app can be found here in this repository: /Video/Demonstration_Video_App.mp4
 
 The video showcases all key functionalities including participant selection, cognitive and stress classification, physiological cluster exploration, and interactive visualizations.
 

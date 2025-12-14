@@ -73,6 +73,11 @@ The app provides a comprehensive visualization and analysis platform for:
    python -m venv venv
 ````
 
+3. Create a new conda environment:
+```bash
+conda create -n cognitive_env python=3.12
+```
+
 3. Activate the environment:
 
    * Windows:
@@ -80,12 +85,9 @@ The app provides a comprehensive visualization and analysis platform for:
      ```bash
      venv\Scripts\activate
      ```
-     or 
-
-    * Create a new conda environment:
-        ```bash
-        conda create -n cognitive_env python=3.12
-        ```
+      ```bash
+     conda activate cognitive_env
+     ```
    * macOS/Linux:
 
      ```bash
